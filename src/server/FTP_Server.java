@@ -29,13 +29,20 @@ public class FTP_Server{
         }
     }
 	
-	public void creerLienClient() {
-		// TODO 
+	public void creerLienClient(DatagramPacket dp) {
+		adresseClient=dp.getAddress();
+		portClient=dp.getPort();
+		try {
+			byte[] rep = new String("ACK").getBytes();
+			DatagramPacket reponse = new DatagramPacket(rep,rep.length,adresseClient,portClient);
+			sock.send(reponse);
+		}catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 	
 	public boolean verifierConnexion(DatagramPacket dp) {
-		// TODO
-		return true;
+		return (dp.getAddress().equals(adresseClient) && dp.getPort()==this.portClient);
 	}
 	
 	
@@ -47,8 +54,15 @@ public class FTP_Server{
 			byte[] nomb = new byte[70];
 			
 			DatagramPacket paquet =new DatagramPacket (nomb , nomb.length );
+			DatagramPacket reponse;
 	        
 			sock.receive(paquet);
+			while(!verifierConnexion(paquet)) {
+				byte[] rep = new String("WAI").getBytes();
+				reponse=new DatagramPacket(rep,rep.length,paquet.getAddress(),paquet.getPort());
+				sock.send(reponse);
+				sock.receive(paquet);
+			}
 			
 			String filename = new String(paquet.getData());
 
@@ -59,6 +73,12 @@ public class FTP_Server{
 		        paquet =new DatagramPacket ( tampon , tampon.length ) ;
 
 		        sock.receive(paquet);
+		        while(!verifierConnexion(paquet)) {
+					byte[] rep = new String("WAI").getBytes();
+					reponse=new DatagramPacket(rep,rep.length,paquet.getAddress(),paquet.getPort());
+					sock.send(reponse);
+					sock.receive(paquet);
+				}
 		        fos.write(paquet.getData());
 		            
 		        
@@ -66,14 +86,23 @@ public class FTP_Server{
 		        paquet = new DatagramPacket ( etat , etat.length ) ;
 		        
 		        sock.receive(paquet);
+		        while(!verifierConnexion(paquet)) {
+					byte[] rep = new String("WAI").getBytes();
+					reponse=new DatagramPacket(rep,rep.length,paquet.getAddress(),paquet.getPort());
+					sock.send(reponse);
+					sock.receive(paquet);
+				}
 		        
 		        String res = new String(paquet.getData());
 		        if(res.equals("STO")) { //STOP
 		        	termine=true;
+		        	etat = new String("TER").getBytes();
+		        	reponse = new DatagramPacket ( etat , etat.length ,adresseClient,portClient) ;
+		        	sock.send(reponse);
 		        }else {
 		        	etat = new String("GO!").getBytes();
-		        	paquet = new DatagramPacket ( etat , etat.length ,adresseClient,portClient) ;
-		        	sock.send(paquet);
+		        	reponse = new DatagramPacket ( etat , etat.length ,adresseClient,portClient) ;
+		        	sock.send(reponse);
 		        }
 		        
 			}
