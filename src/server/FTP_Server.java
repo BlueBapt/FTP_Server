@@ -66,7 +66,7 @@ public class FTP_Server{
 			
 			String filename = new String(paquet.getData());
 
-			FileOutputStream fos = new FileOutputStream(filename);
+			FileOutputStream fos = new FileOutputStream("stockage/"+filename);
 			
 			while(!termine) {
 		        byte [] tampon = new byte [70] ;
@@ -99,7 +99,7 @@ public class FTP_Server{
 		        	etat = new String("TER").getBytes();
 		        	reponse = new DatagramPacket ( etat , etat.length ,adresseClient,portClient) ;
 		        	sock.send(reponse);
-		        }else {
+		        }else if(res.equals("CON")){
 		        	etat = new String("GO!").getBytes();
 		        	reponse = new DatagramPacket ( etat , etat.length ,adresseClient,portClient) ;
 		        	sock.send(reponse);
@@ -115,6 +115,16 @@ public class FTP_Server{
 		}
 		return true;
     }
+	
+	
+	public void demarrer() {
+		while (true) {
+			if(adresseClient==null) {
+				byte[] co = new byte[3];
+			}
+		}
+		
+	}
 
 }
 
