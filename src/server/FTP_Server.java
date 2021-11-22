@@ -65,8 +65,8 @@ public class FTP_Server{
 			}
 			
 			String filename = new String(paquet.getData());
-
-			FileOutputStream fos = new FileOutputStream("stockage/"+filename);
+			
+			FileOutputStream fos = new FileOutputStream(filename);
 			
 			while(!termine) {
 		        byte [] tampon = new byte [70] ;
@@ -117,13 +117,46 @@ public class FTP_Server{
     }
 	
 	
-	public void demarrer() {
-		while (true) {
-			if(adresseClient==null) {
-				byte[] co = new byte[3];
+	public boolean demarrer() {
+		try {
+			while (true) {
+				if(adresseClient==null) {
+					byte[] co = new byte[3];
+					DatagramPacket paquet;
+					
+					boolean connexionReussie=false;
+					while(!connexionReussie) {
+						paquet =new DatagramPacket(co, 3);
+						sock.receive(paquet);
+						String res = new String(paquet.getData());
+						if(res.equals("SYN")) {
+							creerLienClient(paquet);
+							co = new String("ACK").getBytes();
+							paquet =new DatagramPacket(co, 3,paquet.getAddress(),paquet.getPort());
+							sock.send(paquet);
+							connexionReussie=true;
+						}else {
+							co = new String("NON").getBytes();
+							paquet =new DatagramPacket(co, 3,paquet.getAddress(),paquet.getPort());
+							sock.send(paquet);
+							co = new byte[3];
+						}
+					}
+					
+					recevoirFichier();
+					adresseClient=null;
+					
+				}
 			}
+		}catch(Exception e) {
+			e.printStackTrace();
+			return false;
 		}
-		
+	}
+	
+	public static void main(String[] args) {
+		FTP_Server serv = getFTP_Server();
+		serv.demarrer();
 	}
 
 }

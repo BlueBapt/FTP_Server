@@ -1,9 +1,11 @@
 package server;
 //C:\Users\Baptiste\Desktop\FTP_Server\stockage
 
-import java.net.* ; 
-import java.io.* ;
-import java.util.*;
+import java.io.FileInputStream;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.util.Scanner;
 public class FTP_Client{
 	
 	private DatagramSocket sock;
@@ -21,6 +23,7 @@ public class FTP_Client{
             sock=new DatagramSocket(5054);
             creerLienServer(InetAddress.getByName("localhost"),5069);
         }catch (Exception e){
+        	e.printStackTrace();
             System.out.println("bruh");
         }
     }
@@ -37,7 +40,7 @@ public class FTP_Client{
 	
 	public boolean envoyerFichier() {
 		try {
-			String chemin="C:/Users/Baptiste/Pictures/abdellou.png";
+			String chemin="C:/Users/Elève/Pictures/actually.png"; // C:/Users/Baptiste/Pictures/abdellou.png
 			String[] tab=chemin.split("/");
 			String nom = tab[tab.length-1];
 			FileInputStream fos = new FileInputStream(chemin);
@@ -50,9 +53,11 @@ public class FTP_Client{
 			byte[] etat;
 			while(!termine) {
 				byte [] tampon;
+				System.out.println("on envois");
 				if(fos.available()<70) {
 					tampon = new byte [fos.available()] ;
 					termine=true;
+					System.out.println("derniere fois qu'on envoit");
 				}else {
 					tampon = new byte [70] ;
 				}
@@ -83,6 +88,46 @@ public class FTP_Client{
 		
 		return true;
 		
+	}
+	
+	
+	public boolean demarrer() {
+		try {
+			while (true) {
+					byte[] co = new String("SYN").getBytes();
+					byte[] rep;
+					DatagramPacket paquet;
+					
+					boolean connexionReussie=false;
+					while(!connexionReussie) {
+						paquet =new DatagramPacket(co, 3,adresseServer,portServer);
+						sock.send(paquet);
+						rep = new byte[3];
+						paquet = new DatagramPacket(rep,3);
+						sock.receive(paquet);
+						String res = new String(paquet.getData());
+						if(res.equals("ACK")) {
+							connexionReussie=true;
+						}else {
+							Thread.sleep(1000);
+						}
+					}
+					
+					envoyerFichier();
+					System.out.println("Appuyez sur entrée pour continuer");
+					Scanner sc = new Scanner(System.in);
+					sc.nextLine();
+					
+			}
+		}catch(Exception e) {
+			e.printStackTrace();
+			return false;
+		}
+	}
+	
+	public static void main(String[] args) {
+		FTP_Client serv = new FTP_Client();
+		serv.demarrer();
 	}
 
 }
