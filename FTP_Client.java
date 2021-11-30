@@ -46,12 +46,54 @@ public class FTP_Client{
 	public boolean verifierConnexion(DatagramPacket dp) {
 		return (dp.getAddress().equals(adresseServer) && dp.getPort()==this.portServer);
 	}
+
+	public void recevoirListeFichier(){
+		boolean termine=false;
+		DatagramPacket reponse;
+		try{
+			int i=1;
+			while(!termine){
+				byte[] tmp = new byte[257];
+				DatagramPacket dp = new DatagramPacket(tmp,tmp.length);
+				sock.receive(dp);
+				while(!verifierConnexion(dp)) {
+					tmp = new byte[257];
+					dp = new DatagramPacket(tmp,tmp.length);
+					sock.receive(dp);
+				}
+
+				String nomFichier = new String(dp.getData()).trim();
+				System.out.println(i+"- "+nomFichier);
+				i++;
+
+				byte[] etat=new byte[3];
+				dp = new DatagramPacket(etat,etat.length);
+				sock.receive(dp);
+				while(!verifierConnexion(dp)) {
+					etat = new byte[3];
+					dp = new DatagramPacket(etat,etat.length);
+					sock.receive(dp);
+				}
+
+				String action = new String(dp.getData()).trim();
+				if(action.equals("STO")){
+					termine=true;
+					envoyerMessageCourt("TER");
+				}else{
+					envoyerMessageCourt("GO!");
+				}
+
+			}
+			System.out.println("Listage recu");
+
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+	}
 	
 	
 	public boolean envoyerFichier(String chemin) {
-		//envoyer d'abord l'action que l'on veut faire
 		try {
-			//String chemin="test/actually.png"; // C:/Users/Baptiste/Pictures/abdellou.png
 			String[] tab=chemin.split("/");
 			String nom = tab[tab.length-1];
 			FileInputStream fos = new FileInputStream(chemin);
@@ -138,6 +180,7 @@ public class FTP_Client{
 				System.out.println("Choisissez votre action :");
 				System.out.println("1 - envoyer un fichier");
 				System.out.println("2 - voir les fichiers sur le serveur");
+				System.out.println("3 - recevoir un fichier");
 				Scanner sc = new Scanner(System.in);
 				String choix =sc.nextLine();
 				switch(choix){
@@ -163,6 +206,19 @@ public class FTP_Client{
 					case "2":
 						System.out.println("Affichage des fichiers :");
 						envoyerMessageCourt("LIS");
+						recevoirListeFichier();
+						cbon=true;
+						// A faire
+						break;
+
+					case "3":
+						System.out.println("Affichage des fichiers :");
+						envoyerMessageCourt("REC");
+						recevoirListeFichier();
+						System.out.println("Choisissez un fichier :");
+						//aled(sc.nextLine());
+						
+
 						cbon=true;
 						// A faire
 						break;

@@ -137,7 +137,10 @@ public class FTP_Server{
 					recevoirFichier();
 					break;
 				case "1":
-					//faire une méthode pour lister les fichiers
+					envoyerListeFichier();
+					break;
+				case "2":
+					envoyerListeFichier();
 					break;
 				case "95":
 					System.out.println("eteinte du serveur a distance...");
@@ -147,6 +150,43 @@ public class FTP_Server{
 					break;
 			}
 			adresseClient=null;
+		}
+	}
+
+	public void envoyerListeFichier(){
+		String[] fichiers = listerStockage();
+		boolean termine=false;
+		int i=0;
+		DatagramPacket reponse;
+		try{
+			while(!termine){
+				byte[] tmp = fichiers[i].getBytes();
+				System.out.println("envois de "+fichiers[i]);
+				DatagramPacket dp = new DatagramPacket(tmp,tmp.length,adresseClient,portClient);
+				sock.send(dp);
+
+				if(i==fichiers.length-1){
+					envoyerMessageCourt("STO");
+					termine=true;
+				}else{
+					envoyerMessageCourt("CON");
+				}
+				i++;
+
+				byte[] etat = new byte[3];
+				dp =new DatagramPacket ( etat , etat.length ) ;
+		        sock.receive(dp);
+				while(!verifierConnexion(dp)) {
+					byte[] rep = new String("WAI").getBytes();
+					reponse=new DatagramPacket(rep,rep.length,dp.getAddress(),dp.getPort());
+					sock.send(reponse);
+					sock.receive(dp);
+				}
+			}
+			System.out.println("Listage envoye");
+
+		}catch(Exception e){
+			e.printStackTrace();
 		}
 	}
 
@@ -173,6 +213,9 @@ public class FTP_Server{
 				
 				case "LIS":
 					return "1";
+
+				case "REC":
+					return "2";
 			}
 		}catch(Exception e){
 			e.printStackTrace();
