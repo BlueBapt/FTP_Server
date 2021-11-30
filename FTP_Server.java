@@ -58,7 +58,7 @@ public class FTP_Server{
 		try {
 			boolean termine=false;
 			
-			byte[] nomb = new byte[70];
+			byte[] nomb = new byte[254];
 			
 			DatagramPacket paquet =new DatagramPacket (nomb , nomb.length );
 			DatagramPacket reponse;
@@ -77,7 +77,7 @@ public class FTP_Server{
 			System.out.println("nom du fichier recu : "+filename);
 			
 			while(!termine) {
-		        byte [] tampon = new byte [200] ;
+		        byte [] tampon = new byte [1000] ;
 		        paquet =new DatagramPacket ( tampon , tampon.length ) ;
 
 				System.out.println("pret a recevoir le paquet");
@@ -126,6 +126,71 @@ public class FTP_Server{
 		}
 		return true;
     }
+
+
+	public boolean envoyerFichier() {
+		try {
+			
+			byte[] nomb = new byte[254];
+		    DatagramPacket paquet = new DatagramPacket ( nomb , nomb.length ) ;
+			DatagramPacket reponse;
+		        
+			System.out.println("reception nom fichier");
+		    sock.receive(paquet);
+			System.out.println("apres reception");
+		    while(!verifierConnexion(paquet)) {
+				byte[] rep = new String("WAI").getBytes();
+				reponse=new DatagramPacket(rep,rep.length,paquet.getAddress(),paquet.getPort());
+				sock.send(reponse);
+				sock.receive(paquet);
+			}
+
+			String chemin = new String(paquet.getData()).trim();
+			FileInputStream fos = new FileInputStream("stockage/"+chemin);
+			
+			boolean termine = false;
+			byte[] etat;
+			while(!termine) {
+				byte [] tampon;
+				if(fos.available()<1000) {
+					tampon = new byte [fos.available()] ;
+					termine=true;
+					System.out.println("derniere fois qu'on envoit");
+				}else {
+					tampon = new byte [1000] ;
+				}
+				fos.read(tampon);
+				DatagramPacket dp = new DatagramPacket ( tampon , tampon.length ,adresseClient,portClient) ;
+				System.out.println("on envoit");
+				sock.send(dp);
+				System.out.println("envoye");
+
+
+				if(termine) {
+		        	envoyerMessageCourt("STO");
+				}else {
+					envoyerMessageCourt("CON");
+				}
+				
+				System.out.println("avant reponse");
+				etat = new byte[3];
+				reponse =new DatagramPacket ( etat , etat.length ) ;
+		        sock.receive(reponse);
+				System.out.println("apresReponse");
+
+				
+			}
+			
+			
+		
+		}catch(Exception e) {
+			e.printStackTrace();
+			return false;
+		}
+		
+		return true;
+		
+	}
 	
 	
 	public boolean demarrer() {
@@ -141,6 +206,7 @@ public class FTP_Server{
 					break;
 				case "2":
 					envoyerListeFichier();
+					envoyerFichier();
 					break;
 				case "95":
 					System.out.println("eteinte du serveur a distance...");

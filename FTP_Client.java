@@ -1,11 +1,13 @@
 //C:\Users\Baptiste\Desktop\FTP_Server\stockage
 
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.File;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.Scanner;
+import java.util.ArrayList;
 public class FTP_Client{
 	
 	private DatagramSocket sock;
@@ -47,11 +49,11 @@ public class FTP_Client{
 		return (dp.getAddress().equals(adresseServer) && dp.getPort()==this.portServer);
 	}
 
-	public void recevoirListeFichier(){
+	public ArrayList<String> recevoirListeFichier(){
 		boolean termine=false;
 		DatagramPacket reponse;
+		ArrayList<String> res=new ArrayList<>();
 		try{
-			int i=1;
 			while(!termine){
 				byte[] tmp = new byte[257];
 				DatagramPacket dp = new DatagramPacket(tmp,tmp.length);
@@ -63,8 +65,7 @@ public class FTP_Client{
 				}
 
 				String nomFichier = new String(dp.getData()).trim();
-				System.out.println(i+"- "+nomFichier);
-				i++;
+				res.add(nomFichier);
 
 				byte[] etat=new byte[3];
 				dp = new DatagramPacket(etat,etat.length);
@@ -84,11 +85,11 @@ public class FTP_Client{
 				}
 
 			}
-			System.out.println("Listage recu");
 
 		}catch(Exception e){
 			e.printStackTrace();
 		}
+		return res;
 	}
 	
 	
@@ -106,12 +107,12 @@ public class FTP_Client{
 			byte[] etat;
 			while(!termine) {
 				byte [] tampon;
-				if(fos.available()<200) {
+				if(fos.available()<1000) {
 					tampon = new byte [fos.available()] ;
 					termine=true;
 					System.out.println("derniere fois qu'on envoit");
 				}else {
-					tampon = new byte [200] ;
+					tampon = new byte [1000] ;
 				}
 				fos.read(tampon);
 				DatagramPacket dp = new DatagramPacket ( tampon , tampon.length ,adresseServer,portServer) ;
@@ -172,10 +173,71 @@ public class FTP_Client{
 		return true;
 	}
 
+	public boolean recevoirFichier(String filename){
+		try {
+			filename=filename.trim();
+			FileOutputStream fos = new FileOutputStream(filename);
+			System.out.println("fichier a recevoir : "+filename);
+
+			boolean termine =false;
+			DatagramPacket paquet,reponse;
+			
+			while(!termine) {
+		        byte [] tampon = new byte [1000] ;
+		        paquet =new DatagramPacket ( tampon , tampon.length ) ;
+
+				System.out.println("pret a recevoir le paquet");
+		        sock.receive(paquet);
+				System.out.println("paquet recu");
+		        while(!verifierConnexion(paquet)) {
+					byte[] rep = new String("WAI").getBytes();
+					reponse=new DatagramPacket(rep,rep.length,paquet.getAddress(),paquet.getPort());
+					sock.send(reponse);
+					sock.receive(paquet);
+				}
+		        fos.write(paquet.getData());
+		            
+		        
+		        byte[] etat = new byte[3];
+		        paquet = new DatagramPacket ( etat , etat.length ) ;
+		        
+				System.out.println("avant etat");
+		        sock.receive(paquet);
+				System.out.println("apres etat");
+		        while(!verifierConnexion(paquet)) {
+					byte[] rep = new String("WAI").getBytes();
+					reponse=new DatagramPacket(rep,rep.length,paquet.getAddress(),paquet.getPort());
+					sock.send(reponse);
+					sock.receive(paquet);
+				}
+		        
+		        String res = new String(paquet.getData()).trim();
+				System.out.println("envois reponse");
+		        if(res.equals("STO")) { //STOP
+		        	termine=true;
+		        	envoyerMessageCourt("TER");
+		        }else if(res.equals("CON")){
+		        	envoyerMessageCourt("GO!");
+		        }
+				System.out.println("apres envois repose");
+		        
+			}
+	        
+			fos.close();
+			System.out.println("fichier recu");
+	        
+		}catch(Exception e) {
+			e.printStackTrace();
+			return false;
+		}
+		return true;
+    }
+
 	public void demarrer(){
 		try{
 			this.connexion();
 			boolean cbon = false;
+			int i;
 			while(!cbon){
 				System.out.println("Choisissez votre action :");
 				System.out.println("1 - envoyer un fichier");
@@ -204,23 +266,50 @@ public class FTP_Client{
 						break;
 
 					case "2":
-						System.out.println("Affichage des fichiers :");
 						envoyerMessageCourt("LIS");
-						recevoirListeFichier();
+						ArrayList<String> liste =recevoirListeFichier();
+						i=1;
+						System.out.println("Affichage des fichiers :");
+						for(String f : liste){
+							System.out.println(i+"- "+f);
+							i++;
+						}
 						cbon=true;
 						// A faire
 						break;
 
 					case "3":
-						System.out.println("Affichage des fichiers :");
 						envoyerMessageCourt("REC");
-						recevoirListeFichier();
-						System.out.println("Choisissez un fichier :");
-						//aled(sc.nextLine());
+						ArrayList<String> liste2 =recevoirListeFichier();
+						i=1;
+						System.out.println("Affichage des fichiers :");
+						for(String f : liste2){
+							System.out.println(i+"- "+f);
+							i++;
+						}
+						String num="";
+						boolean bonneSaisie=false;
+						while(!bonneSaisie){
+							System.out.println("Choisissez un fichier (le numero) :");
+							num =sc.nextLine();
+							try{
+								if(Integer.parseInt(num)<=liste2.size() && Integer.parseInt(num)>=1 ){
+									bonneSaisie=true;
+								}else{
+									System.out.println("Le numero n'est pas bon");
+								}
+							}catch(Exception e){
+								System.out.println("Mauvaise saisie");
+							}
+						}						
 						
+						byte[] nomFichier = liste2.get(Integer.parseInt(num)-1).getBytes();
 
+						DatagramPacket dp =new DatagramPacket(nomFichier,nomFichier.length,adresseServer,portServer);
+						sock.send(dp);
+						recevoirFichier(liste2.get(Integer.parseInt(num)-1));
+						
 						cbon=true;
-						// A faire
 						break;
 
 					case "95":
