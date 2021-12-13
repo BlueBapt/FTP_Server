@@ -33,6 +33,7 @@ public class FTP_Server{
 	public void initialiser(){
         try{
             sock=new DatagramSocket(5069);
+			sock.setSoTimeout(10000);
         }catch (Exception e){
             System.out.println("le port est deja pris");
 			System.exit(1);
@@ -138,6 +139,7 @@ public class FTP_Server{
 			System.out.println("reception nom fichier");
 		    sock.receive(paquet);
 			System.out.println("apres reception");
+			sock.setSoTimeout(1000);
 		    while(!verifierConnexion(paquet)) {
 				byte[] rep = new String("WAI").getBytes();
 				reponse=new DatagramPacket(rep,rep.length,paquet.getAddress(),paquet.getPort());
@@ -197,25 +199,33 @@ public class FTP_Server{
 		while(true){
 			connexion();
 			String instruction=recevoirChoix();
-			switch(instruction){
-				case "0":
-					recevoirFichier();
-					break;
-				case "1":
-					envoyerListeFichier();
-					break;
-				case "2":
-					envoyerListeFichier();
-					envoyerFichier();
-					break;
-				case "95":
-					System.out.println("eteinte du serveur a distance...");
-					System.exit(1);
-				default:
-					System.out.println("commande inconnue");
-					break;
+			try{
+				switch(instruction){
+					case "0":
+						sock.setSoTimeout(1000);
+						recevoirFichier();
+						break;
+					case "1":
+						sock.setSoTimeout(1000);
+						envoyerListeFichier();
+						break;
+					case "2":
+						sock.setSoTimeout(1000);
+						envoyerListeFichier();
+						sock.setSoTimeout(10000);
+						envoyerFichier();
+						break;
+					case "95":
+						System.out.println("eteinte du serveur a distance...");
+						System.exit(1);
+					default:
+						System.out.println("commande inconnue");
+						break;
+				}
+				adresseClient=null;
+			}catch(Exception e){
+				e.printStackTrace();
 			}
-			adresseClient=null;
 		}
 	}
 
@@ -299,6 +309,7 @@ public class FTP_Server{
 				while(!connexionReussie) {
 					paquet =new DatagramPacket(co, 3);
 					System.out.println("En attente d'une connexion...");
+					sock.setSoTimeout(0);
 					sock.receive(paquet);
 					String res = new String(paquet.getData()).trim();
 					if(res.equals("SYN")) {
