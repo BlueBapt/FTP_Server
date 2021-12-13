@@ -33,7 +33,6 @@ public class FTP_Server{
 	public void initialiser(){
         try{
             sock=new DatagramSocket(5069);
-			sock.setSoTimeout(10000);
         }catch (Exception e){
             System.out.println("le port est deja pris");
 			System.exit(1);
@@ -128,6 +127,36 @@ public class FTP_Server{
 		return true;
     }
 
+	public void effacerFichier(){
+		try{
+			byte[] nomb = new byte[254];
+		    DatagramPacket paquet = new DatagramPacket ( nomb , nomb.length ) ;
+			DatagramPacket reponse;
+		        
+			System.out.println("reception nom fichier");
+		    sock.receive(paquet);
+			System.out.println("apres reception");
+			sock.setSoTimeout(1000);
+		    while(!verifierConnexion(paquet)) {
+				byte[] rep = new String("WAI").getBytes();
+				reponse=new DatagramPacket(rep,rep.length,paquet.getAddress(),paquet.getPort());
+				sock.send(reponse);
+				sock.receive(paquet);
+			}
+
+			String chemin = new String(paquet.getData()).trim();
+
+			File f = new File("stockage/"+chemin);
+			if(f.delete()){
+				System.out.println(chemin+" a ete supprime");
+			}else{
+				System.out.println("echec dans la suppression");
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+	}
+
 
 	public boolean envoyerFichier() {
 		try {
@@ -215,9 +244,16 @@ public class FTP_Server{
 						sock.setSoTimeout(10000);
 						envoyerFichier();
 						break;
+					case "3":
+						sock.setSoTimeout(1000);
+						envoyerListeFichier();
+						sock.setSoTimeout(10000);
+						effacerFichier();
+						break;
 					case "95":
 						System.out.println("eteinte du serveur a distance...");
-						System.exit(1);
+						sock.close();
+						System.exit(0);
 					default:
 						System.out.println("commande inconnue");
 						break;
@@ -292,6 +328,9 @@ public class FTP_Server{
 
 				case "REC":
 					return "2";
+
+				case "EFF":
+					return "3";
 			}
 		}catch(Exception e){
 			e.printStackTrace();

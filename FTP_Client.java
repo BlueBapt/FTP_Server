@@ -243,8 +243,14 @@ public class FTP_Client{
 				System.out.println("1 - envoyer un fichier");
 				System.out.println("2 - voir les fichiers sur le serveur");
 				System.out.println("3 - recevoir un fichier");
+				System.out.println("4 - effacer un fichier");
 				Scanner sc = new Scanner(System.in);
 				String choix =sc.nextLine();
+				DatagramPacket dp;
+				String num;
+				boolean bonneSaisie;
+				byte[] nomFichier;
+				ArrayList<String> liste;
 				switch(choix){
 					case "1":
 						System.out.println("Entrez le chemin du fichier");
@@ -267,7 +273,7 @@ public class FTP_Client{
 
 					case "2":
 						envoyerMessageCourt("LIS");
-						ArrayList<String> liste =recevoirListeFichier();
+						liste =recevoirListeFichier();
 						i=1;
 						System.out.println("Affichage des fichiers :");
 						for(String f : liste){
@@ -275,25 +281,24 @@ public class FTP_Client{
 							i++;
 						}
 						cbon=true;
-						// A faire
 						break;
 
 					case "3":
 						envoyerMessageCourt("REC");
-						ArrayList<String> liste2 =recevoirListeFichier();
+						liste =recevoirListeFichier();
 						i=1;
 						System.out.println("Affichage des fichiers :");
-						for(String f : liste2){
+						for(String f : liste){
 							System.out.println(i+"- "+f);
 							i++;
 						}
-						String num="";
-						boolean bonneSaisie=false;
+						num="";
+						bonneSaisie=false;
 						while(!bonneSaisie){
 							System.out.println("Choisissez un fichier (le numero) :");
 							num =sc.nextLine();
 							try{
-								if(Integer.parseInt(num)<=liste2.size() && Integer.parseInt(num)>=1 ){
+								if(Integer.parseInt(num)<=liste.size() && Integer.parseInt(num)>=1 ){
 									bonneSaisie=true;
 								}else{
 									System.out.println("Le numero n'est pas bon");
@@ -303,11 +308,44 @@ public class FTP_Client{
 							}
 						}						
 						
-						byte[] nomFichier = liste2.get(Integer.parseInt(num)-1).getBytes();
+						nomFichier = liste.get(Integer.parseInt(num)-1).getBytes();
 
-						DatagramPacket dp =new DatagramPacket(nomFichier,nomFichier.length,adresseServer,portServer);
+						dp =new DatagramPacket(nomFichier,nomFichier.length,adresseServer,portServer);
 						sock.send(dp);
-						recevoirFichier(liste2.get(Integer.parseInt(num)-1));
+						recevoirFichier(liste.get(Integer.parseInt(num)-1));
+						
+						cbon=true;
+						break;
+					case "4":
+						envoyerMessageCourt("EFF");
+						liste =recevoirListeFichier();
+						i=1;
+						System.out.println("Affichage des fichiers :");
+						for(String f : liste){
+							System.out.println(i+"- "+f);
+							i++;
+						}
+						num="";
+						bonneSaisie=false;
+						while(!bonneSaisie){
+							System.out.println("Choisissez un fichier (le numero) :");
+							num =sc.nextLine();
+							try{
+								if(Integer.parseInt(num)<=liste.size() && Integer.parseInt(num)>=1 ){
+									bonneSaisie=true;
+								}else{
+									System.out.println("Le numero n'est pas bon");
+								}
+							}catch(Exception e){
+								System.out.println("Mauvaise saisie");
+							}
+						}						
+						
+						nomFichier = liste.get(Integer.parseInt(num)-1).getBytes();
+
+						dp =new DatagramPacket(nomFichier,nomFichier.length,adresseServer,portServer);
+						sock.send(dp);
+						System.out.println("action envoyee");
 						
 						cbon=true;
 						break;
